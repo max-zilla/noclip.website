@@ -64,6 +64,7 @@ import * as Scenes_Portal from './SourceEngine/Scenes_Portal';
 import * as Scenes_BeetleAdventureRacing from './BeetleAdventureRacing/Scenes';
 import * as Scenes_TheWitness from './TheWitness/Scenes_TheWitness';
 import * as Scenes_FFX from './FinalFantasyX/scenes';
+import * as Scenes_TombRaider from './TombRaider/scenes';
 
 import { DroppedFileSceneDesc, traverseFileSystemDataTransfer } from './Scenes_FileDrops';
 
@@ -155,6 +156,7 @@ const sceneGroups = [
     Scenes_StarFoxAdventures.sceneGroup,
     Scenes_SuperMarioOdyssey.sceneGroup,
     Scenes_SuperSmashBrosMelee.sceneGroup,
+    Scenes_TombRaider.sceneGroup,
     Scenes_WiiUTransferTool.sceneGroup,
     Scenes_Zelda_OcarinaOfTime.sceneGroup,
     Scenes_GoldenEye007.sceneGroup,
