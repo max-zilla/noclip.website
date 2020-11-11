@@ -44,7 +44,7 @@ layout(location = ${PHDProgram.a_Position}) attribute vec3 a_Position;
 layout(location = ${PHDProgram.a_Normal}) attribute vec3 a_Normal;
 
 void mainVS() {
-    const float t_ModelScale = 20.0;
+    const float t_ModelScale = 1.0;
     gl_Position = Mul(u_Projection, Mul(u_ModelView, vec4(a_Position * t_ModelScale, 1.0)));
     vec3 t_LightDirection = normalize(vec3(.2, -1, .5));
     float t_LightIntensityF = dot(-a_Normal, t_LightDirection);
@@ -73,40 +73,84 @@ export class Room {
     constructor(device: GfxDevice, public room: PHD.TR1Room, private inputLayout: GfxInputLayout) {
         const t = vec3.create();
 
-        const posData = new Float32Array(room.triangles.length * 3);
-        const nrmData = new Float32Array(room.triangles.length * 3);
+        this.numVertices = (room.triangles.length * 3) + (room.rectangles.length * 6);
+        const posData = new Float32Array(this.numVertices * 3);
+        const nrmData = new Float32Array(this.numVertices * 3);
 
-        for ( var j = 0; j < room.triangles.length; j += 3 ) {
-            let v0 = room.vertices[room.triangles[j].vertices[0]];
-            let v1 = room.vertices[room.triangles[j].vertices[1]];
-            let v2 = room.vertices[room.triangles[j].vertices[2]];
+        // Add the triangles
+        for ( var j = 0; j < room.triangles.length; j ++ ) {
+            let v0 = room.vertices[room.triangles[j].vertices[0]]
+            let v1 = room.vertices[room.triangles[j].vertices[1]]
+            let v2 = room.vertices[room.triangles[j].vertices[2]]
 
             vec3.cross(t, [v0.x - v1.x, v0.y - v1.y, v0.z - v1.z], [v0.x - v2.x, v0.y - v2.y, v0.z - v2.z]);
             vec3.normalize(t, t);
 
-            posData[(j + 0) * 3 + 0] = v0.x;
-            posData[(j + 0) * 3 + 1] = v0.y;
-            posData[(j + 0) * 3 + 2] = v0.z;
-            posData[(j + 1) * 3 + 0] = v1.x;
-            posData[(j + 1) * 3 + 1] = v1.y;
-            posData[(j + 1) * 3 + 2] = v1.z;
-            posData[(j + 2) * 3 + 0] = v2.x;
-            posData[(j + 2) * 3 + 1] = v2.y;
-            posData[(j + 2) * 3 + 2] = v2.z;
+            let startPos = j * 9;
+            posData[startPos]     = v0.x;
+            posData[startPos + 1] = v0.y;
+            posData[startPos + 2] = v0.z;
+            posData[startPos + 3] = v1.x;
+            posData[startPos + 4] = v1.y;
+            posData[startPos + 5] = v1.z;
+            posData[startPos + 6] = v2.x;
+            posData[startPos + 7] = v2.y;
+            posData[startPos + 8] = v2.z;
 
-            nrmData[(j + 0) * 3 + 0] = t[0];
-            nrmData[(j + 0) * 3 + 1] = t[1];
-            nrmData[(j + 0) * 3 + 2] = t[2];
-            nrmData[(j + 1) * 3 + 0] = t[0];
-            nrmData[(j + 1) * 3 + 1] = t[1];
-            nrmData[(j + 1) * 3 + 2] = t[2];
-            nrmData[(j + 2) * 3 + 0] = t[0];
-            nrmData[(j + 2) * 3 + 1] = t[1];
-            nrmData[(j + 2) * 3 + 2] = t[2];
+            nrmData[startPos]     = t[0];
+            nrmData[startPos + 1] = t[1];
+            nrmData[startPos + 2] = t[2];
+            nrmData[startPos + 3] = t[0];
+            nrmData[startPos + 4] = t[1];
+            nrmData[startPos + 5] = t[2];
+            nrmData[startPos + 6] = t[0];
+            nrmData[startPos + 7] = t[1];
+            nrmData[startPos + 8] = t[2];
         }
 
-        console.log(posData);
-        console.log(nrmData);
+        // Add the quads, converted to triangles
+        let offset = (room.triangles.length * 9);
+        for ( var j = 0; j < room.rectangles.length; j ++ ) {
+            let newTriangles = [[
+                room.vertices[room.rectangles[j].vertices[0]], 
+                room.vertices[room.rectangles[j].vertices[1]],
+                room.vertices[room.rectangles[j].vertices[2]]
+            ],[
+                room.vertices[room.rectangles[j].vertices[2]], 
+                room.vertices[room.rectangles[j].vertices[3]],
+                room.vertices[room.rectangles[j].vertices[0]]
+            ]];
+
+            for ( var k = 0; k < newTriangles.length; k ++ ) {
+                let v0 = newTriangles[k][0]; 
+                let v1 = newTriangles[k][1];  
+                let v2 = newTriangles[k][2];
+
+                vec3.cross(t, [v0.x - v1.x, v0.y - v1.y, v0.z - v1.z], [v0.x - v2.x, v0.y - v2.y, v0.z - v2.z]);
+                vec3.normalize(t, t);
+
+                let startPos = offset + (j * 6 + k * 3 + 0) * 3;
+                posData[startPos]     = v0.x;
+                posData[startPos + 1] = v0.y;
+                posData[startPos + 2] = v0.z;
+                posData[startPos + 3] = v1.x;
+                posData[startPos + 4] = v1.y;
+                posData[startPos + 5] = v1.z;
+                posData[startPos + 6] = v2.x;
+                posData[startPos + 7] = v2.y;
+                posData[startPos + 8] = v2.z;
+
+                nrmData[startPos]     = t[0];
+                nrmData[startPos + 1] = t[1];
+                nrmData[startPos + 2] = t[2];
+                nrmData[startPos + 3] = t[0];
+                nrmData[startPos + 4] = t[1];
+                nrmData[startPos + 5] = t[2];
+                nrmData[startPos + 6] = t[0];
+                nrmData[startPos + 7] = t[1];
+                nrmData[startPos + 8] = t[2];
+            }  
+        }
 
         this.posBuffer = makeStaticDataBuffer(device, GfxBufferUsage.VERTEX, posData.buffer);
         this.nrmBuffer = makeStaticDataBuffer(device, GfxBufferUsage.VERTEX, nrmData.buffer);
@@ -116,7 +160,7 @@ export class Room {
             { buffer: this.nrmBuffer, byteOffset: 0 }
         ], null);
 
-        this.numVertices = room.triangles.length;
+        
     }
 
     public prepareToRender(renderInstManager: GfxRenderInstManager): void {
@@ -142,7 +186,7 @@ export class PHDRenderer {
     constructor(device: GfxDevice, public phd: PHD.TR1Level, inputLayout: GfxInputLayout) {
         this.name = phd.name;
     
-        this.rooms = this.phd.rooms.slice(0,5).map((room) => new Room(device, room, inputLayout));
+        this.rooms = this.phd.rooms.map((room) => new Room(device, room, inputLayout));
     }
 
     public setVisible(v: boolean) {
@@ -157,10 +201,12 @@ export class PHDRenderer {
 
         let offs = templateRenderInst.allocateUniformBuffer(PHDProgram.ub_ObjectParams, 4);
         const d = templateRenderInst.mapUniformBufferF32(PHDProgram.ub_ObjectParams);
-        offs += fillColor(d, offs, colorNewFromRGBA(255, 255, 255, 255));
+        offs += fillColor(d, offs, colorNewFromRGBA(255, 0, 0));
 
-        for (let i = 0; i < this.rooms.length; i++)
+        for (let i = 0; i < this.rooms.length; i++) {
             this.rooms[i].prepareToRender(renderInstManager);
+        }
+            
 
         renderInstManager.popTemplateRenderInst();
     }
@@ -195,7 +241,7 @@ export class Scene implements Viewer.SceneGfx {
         const indexBufferFormat: GfxFormat | null = null;
         this.inputLayout = device.createInputLayout({ vertexAttributeDescriptors, vertexBufferDescriptors, indexBufferFormat });
 
-        this.phdRenderers = this.phds.slice(0,1).map((phd) => {
+        this.phdRenderers = this.phds.map((phd) => {
             return new PHDRenderer(device, phd, this.inputLayout);
         });
 

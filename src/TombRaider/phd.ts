@@ -212,9 +212,9 @@ export function parseRoom(buffer: NamedArrayBufferSlice, view: DataView, pos: nu
     let vertices: TR1Vertex[] = [];
     for (let j = 0; j < numVertices; j ++) {
         vertices.push({
-            x: view.getInt16(pos, true),
-            y: view.getInt16(pos + 0x2, true),
-            z: view.getInt16(pos + 0x4, true),
+            x: view.getInt16(pos, true) + position.x,
+            y: -view.getInt16(pos + 0x2, true),
+            z: view.getInt16(pos + 0x4, true) - position.z,
             lighting: view.getUint16(pos + 0x6, true)
         });
         pos += 0x8;
