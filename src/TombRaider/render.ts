@@ -80,8 +80,8 @@ export class Room {
         // Add the triangles
         for ( var j = 0; j < room.triangles.length; j ++ ) {
             let v0 = room.vertices[room.triangles[j].vertices[0]]
-            let v1 = room.vertices[room.triangles[j].vertices[1]]
-            let v2 = room.vertices[room.triangles[j].vertices[2]]
+            let v1 = room.vertices[room.triangles[j].vertices[2]]
+            let v2 = room.vertices[room.triangles[j].vertices[1]]
 
             vec3.cross(t, [v0.x - v1.x, v0.y - v1.y, v0.z - v1.z], [v0.x - v2.x, v0.y - v2.y, v0.z - v2.z]);
             vec3.normalize(t, t);
@@ -113,12 +113,12 @@ export class Room {
         for ( var j = 0; j < room.rectangles.length; j ++ ) {
             let newTriangles = [[
                 room.vertices[room.rectangles[j].vertices[0]], 
-                room.vertices[room.rectangles[j].vertices[1]],
-                room.vertices[room.rectangles[j].vertices[2]]
+                room.vertices[room.rectangles[j].vertices[2]],
+                room.vertices[room.rectangles[j].vertices[1]]
             ],[
                 room.vertices[room.rectangles[j].vertices[2]], 
-                room.vertices[room.rectangles[j].vertices[3]],
-                room.vertices[room.rectangles[j].vertices[0]]
+                room.vertices[room.rectangles[j].vertices[0]],
+                room.vertices[room.rectangles[j].vertices[3]]
             ]];
 
             for ( var k = 0; k < newTriangles.length; k ++ ) {
