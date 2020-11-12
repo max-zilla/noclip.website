@@ -26,7 +26,7 @@ export interface TR1Textile16 {
 
 export interface TR1ObjectTexture {
     attribute: number,
-    tileAndFlag: number,
+    texture: number,
     vertices: TextureVertex[] 
 }
 
@@ -52,21 +52,6 @@ export interface TR1StaticMesh {
     meshID: number      // which StaticMesh to draw
 }
 
-export interface TR1Portal {
-    adjoiningRoom: number,
-    normal: Vertex,
-    vertices: Vertex[]  // vertex IDs; RHR wrt. normal
-}
-
-export interface TR1Sector {
-    floorDataIndex: number, // index of floorData, for sector flags, triggers, params
-    boxIndex: number,       // index of boxes (-1 if none), mostly for AI pathfinding
-    roomBelow: number,      // 255 is none
-    floor: number,          // abs height of floor
-    roomAbove: number,      // 255 is none
-    ceiling: number         // abs height of ceiling
-}
-
 export interface TR1Light {
     position: Vertex,
     intensity: number,
@@ -84,8 +69,6 @@ export interface TR1Room {
     rectangles: TR1Face[],
     triangles: TR1Face[], 
     sprites: TR1Sprite[],
-    portals: TR1Portal[], // TODO: necessary?
-    sectors: TR1Sector[], // TODO: necessary?
     ambientIntensity: number, lights: TR1Light[],
     staticMeshes: TR1StaticMesh[],
     alternateRoom: number, flags: number
@@ -112,7 +95,8 @@ export interface TR1Level {
     name: string,
     textile8: TR1Textile8[],
     rooms: TR1Room[],
-    meshes: TR1Mesh[]
+    meshes: TR1Mesh[],
+    objectTextures: TR1ObjectTexture[]
 }
 
 export function parsePHD(buffer: NamedArrayBufferSlice): TR1Level {
@@ -150,7 +134,7 @@ export function parsePHD(buffer: NamedArrayBufferSlice): TR1Level {
     let meshPos = pos; pos += numMeshData * 2;
     let numMeshPointers = view.getUint32(pos, true); pos += 0x4;
     let meshPointers = buffer.createTypedArray(Uint32Array, pos, numMeshPointers);
-    let animPos = pos;
+    let animPos = pos + numMeshPointers * 0x4;
     let meshes: TR1Mesh[] = [];
     for (let i = 0; i < numMeshPointers; i++) {
         pos = meshPos + meshPointers[i];
@@ -160,7 +144,6 @@ export function parsePHD(buffer: NamedArrayBufferSlice): TR1Level {
     }
     pos = animPos;
 
-    /** 
     // UNUSED: Extract animation data
     let numAnimations = view.getUint32(pos, true); pos += 0x4;
     pos += 0x20 * numAnimations;
@@ -175,26 +158,39 @@ export function parsePHD(buffer: NamedArrayBufferSlice): TR1Level {
     let numFrames = view.getUint32(pos, true); pos += 0x4;
     pos += 0x2 * numFrames;
 
-    // Extract model data
+    // UNUSED: Extract model data
     let numModels = view.getUint32(pos, true); pos += 0x4;
     pos += 0x12 * numModels;
     let numStaticMeshes = view.getUint32(pos, true); pos += 0x4;
     pos += 0x20 * numStaticMeshes;
 
-    // Extract texture data
+    // Extract texture coordinate data
     let numObjectTextures = view.getUint32(pos, true); pos += 0x4;
-    pos += 0x14 * numObjectTextures;
+    let objectTextures: TR1ObjectTexture[] = [];
+    for (let j = 0; j < numObjectTextures; j ++) {
+        let attribute = view.getUint16(pos, true);
+        let texture = view.getUint16(pos + 0x2, true); 
+        let vertices = [
+            { x: view.getInt16(pos + 0x4, true),  y: view.getInt16(pos + 0x6, true) },
+            { x: view.getInt16(pos + 0x8, true),  y: view.getInt16(pos + 0xA, true) },
+            { x: view.getInt16(pos + 0xC, true),  y: view.getInt16(pos + 0xE, true) },
+            { x: view.getInt16(pos + 0x10, true), y: view.getInt16(pos + 0x12, true) }
+        ];
+        objectTextures.push({attribute, texture, vertices});
+        pos += 0x14;
+    }
+
     let numSpriteTextures = view.getUint32(pos, true); pos += 0x4;
     pos += 0x10 * numSpriteTextures;
     let numSpriteSequences = view.getUint32(pos, true); pos += 0x4;
     pos += 0x8 * numSpriteSequences;
-    */
    
     return {
         name,
         textile8,
         rooms,
-        meshes
+        meshes,
+        objectTextures
     };
 }
 
@@ -260,40 +256,11 @@ export function parseRoom(buffer: NamedArrayBufferSlice, view: DataView, pos: nu
     }
 
     let numPortals = view.getUint16(pos, true); pos += 0x2;
-    let portals: TR1Portal[] = [];
-    for (let j = 0; j < numPortals; j ++) {
-        let adjoiningRoom = view.getUint16(pos, true);
-        let normal = {
-            x: view.getInt16(pos + 0x2, true),
-            y: view.getInt16(pos + 0x4, true),
-            z: view.getInt16(pos + 0x6, true)
-        };
-        let vertices: Vertex[] = [];
-        for (let k = 0; k < 4; k ++) {
-            vertices.push({
-                x: view.getInt16(pos + 0x8 + (0x6 * k), true), 
-                y: view.getInt16(pos + 0xA + (0x6 * k), true), 
-                z: view.getInt16(pos + 0xC + (0x6 * k), true)
-            });
-        }
-        portals.push({adjoiningRoom, normal, vertices});
-        pos += 0x20;
-    }
+    pos += numPortals * 0x20;
 
     let numZSectors = view.getUint16(pos, true); pos += 0x2;
     let numXSectors = view.getUint16(pos, true); pos += 0x2;
-    let sectors: TR1Sector[] = [];
-    for (let j = 0; j < (numXSectors * numZSectors); j ++) {
-        sectors.push({
-            floorDataIndex: view.getUint16(pos, true),
-            boxIndex: view.getUint16(pos + 0x2, true),
-            roomBelow: view.getUint8(pos + 0x4),
-            floor: view.getInt8(pos + 0x5),
-            roomAbove: view.getUint8(pos + 0x6),
-            ceiling: view.getInt8(pos + 0x7),
-        });
-        pos += 0x8;
-    }
+    pos += (numXSectors * numZSectors) * 0x8;
 
     let ambientIntensity = view.getInt16(pos, true); pos += 0x2;
     let numLights = view.getUint16(pos, true); pos += 0x2;
@@ -333,7 +300,6 @@ export function parseRoom(buffer: NamedArrayBufferSlice, view: DataView, pos: nu
     return [{
         position,
         vertices, rectangles, triangles, sprites,
-        portals, sectors,
         ambientIntensity, lights,
         staticMeshes,
         alternateRoom, flags

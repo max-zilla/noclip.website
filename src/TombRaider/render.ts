@@ -230,13 +230,15 @@ export class Scene implements Viewer.SceneGfx {
     constructor(device: GfxDevice, public phds: PHD.TR1Level[]) {
         this.program = device.createProgram(new PHDProgram());
 
+        // TODO: What to do with textiles and objectTexture coordinates?
+
         const vertexAttributeDescriptors: GfxVertexAttributeDescriptor[] = [
             { location: PHDProgram.a_Position, bufferIndex: 0, bufferByteOffset: 0, format: GfxFormat.F32_RGB, },
             { location: PHDProgram.a_Normal,   bufferIndex: 1, bufferByteOffset: 0, format: GfxFormat.F32_RGB, }
         ];
         const vertexBufferDescriptors: GfxInputLayoutBufferDescriptor[] = [
-            { byteStride: 3*0x04, frequency: GfxVertexBufferFrequency.PER_VERTEX, },
-            { byteStride: 3*0x04, frequency: GfxVertexBufferFrequency.PER_VERTEX, },
+            { byteStride: 3*0x4, frequency: GfxVertexBufferFrequency.PER_VERTEX, },
+            { byteStride: 3*0x4, frequency: GfxVertexBufferFrequency.PER_VERTEX, },
         ];
         const indexBufferFormat: GfxFormat | null = null;
         this.inputLayout = device.createInputLayout({ vertexAttributeDescriptors, vertexBufferDescriptors, indexBufferFormat });
